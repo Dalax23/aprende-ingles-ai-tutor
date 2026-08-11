@@ -1,0 +1,6 @@
+{
+  "name": "Aprende Inglés - AI Tutor",
+  "description": "Una plataforma inmersiva de aprendizaje de inglés con tutor de IA, análisis de pronunciación por voz en tiempo real y conversación fluida.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
