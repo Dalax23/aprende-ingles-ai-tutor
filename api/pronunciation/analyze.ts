@@ -1,5 +1,14 @@
-import { Type } from "@google/genai";
-import { getAiClient } from "../../lib/geminiClient";
+import { GoogleGenAI, Type } from "@google/genai";
+
+// Inline a propósito: un import relativo a un archivo fuera de /api no se estaba
+// empaquetando en la función de Vercel (ERR_MODULE_NOT_FOUND en producción).
+function getAiClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+    throw new Error("GEMINI_API_KEY no está configurada. Agrégala en Vercel → Settings → Environment Variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
