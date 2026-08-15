@@ -30,6 +30,14 @@ export default async function handler(req: any, res: any) {
       3. La traducción directa al español ('translation').
       4. Una frase de ejemplo natural en inglés ('example').
       5. La traducción al español de la frase de ejemplo ('exampleTranslation').
+      6. Un 'mnemonic' usando el MÉTODO DE PALABRA CLAVE: busca una palabra o sonido en ESPAÑOL
+         que suene PARECIDO a como se pronuncia la palabra en inglés, y crea una imagen mental
+         breve, vívida y hasta absurda que conecte ese sonido parecido con el SIGNIFICADO real
+         de la palabra. Ejemplo real: para "carpet" (alfombra), el gancho sería algo como
+         "Suena como 'carpeta' — imagina una carpeta gigante tirada como alfombra en el piso."
+         Para "beach" (playa), suena como "bich" — imagina una playa llena de perritos (bichis)
+         tomando el sol. Debe ser corto (1-2 oraciones), en español, memorable y algo gracioso
+         o exagerado a propósito (las imágenes absurdas se recuerdan mejor).
 
       Responde únicamente en formato JSON según el esquema especificado.
     `;
@@ -49,9 +57,10 @@ export default async function handler(req: any, res: any) {
               phonetic: { type: Type.STRING, description: "Pronunciación figurada en español." },
               translation: { type: Type.STRING, description: "Traducción al español." },
               example: { type: Type.STRING, description: "Frase de ejemplo en inglés." },
-              exampleTranslation: { type: Type.STRING, description: "Traducción de la frase de ejemplo." }
+              exampleTranslation: { type: Type.STRING, description: "Traducción de la frase de ejemplo." },
+              mnemonic: { type: Type.STRING, description: "Gancho mental con el método de palabra clave (sonido parecido en español + imagen mental vívida) en español." }
             },
-            required: ["word", "phonetic", "translation", "example", "exampleTranslation"]
+            required: ["word", "phonetic", "translation", "example", "exampleTranslation", "mnemonic"]
           }
         }
       }

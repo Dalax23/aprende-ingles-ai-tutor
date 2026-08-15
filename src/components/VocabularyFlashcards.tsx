@@ -49,6 +49,17 @@ export default function VocabularyFlashcards({ onAddXp, onIncrementVocab, onChec
   const activeEntry = dueCards[0];
   const nextDueDate = getNextDueDate(deck);
 
+  // Recuperación bidireccional: alternamos la dirección de la pregunta según la paridad del
+  // número de repaso. Investigación sobre el método de palabra clave muestra que combinarlo
+  // con entrenamiento bidireccional (a veces inglés→español, a veces español→inglés) es más
+  // efectivo que practicar siempre en la misma dirección — fuerza el efecto de generación
+  // (producir la respuesta, no solo reconocerla) en vez de solo reconocimiento pasivo.
+  const isProduction = activeEntry ? activeEntry.fsrs.reviewCount % 2 === 1 : false;
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const clozeExample = activeEntry
+    ? activeEntry.content.example.replace(new RegExp(`\\b${escapeRegex(activeEntry.content.word)}\\b`, "gi"), "_____")
+    : "";
+
   // Generate NEW cards via Gemini and add them to the persistent deck (no borra las existentes).
   const fetchVocabulary = async (topicId: string) => {
     setGenerating(true);
@@ -201,18 +212,37 @@ export default function VocabularyFlashcards({ onAddXp, onIncrementVocab, onChec
 
               {/* Front side card */}
               <div className="absolute inset-0 backface-hidden w-full h-full bg-[#0E0E11] border border-white/10 rounded-3xl p-8 flex flex-col justify-between shadow-xl shadow-black/40 items-center text-center">
-                <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300">
-                  <GraduationCap className="w-5 h-5" />
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300">
+                    <GraduationCap className="w-5 h-5" />
+                  </div>
+                  {isProduction && (
+                    <span className="text-[9px] font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                      Produce la palabra
+                    </span>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-serif italic text-white tracking-tight leading-normal">
-                    {activeEntry.content.word}
-                  </h2>
-                  <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">
-                    Haz clic para revelar significado y fonética
-                  </p>
-                </div>
+                {!isProduction ? (
+                  <div className="space-y-2">
+                    <h2 className="text-3xl font-serif italic text-white tracking-tight leading-normal">
+                      {activeEntry.content.word}
+                    </h2>
+                    <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">
+                      Haz clic para revelar significado y fonética
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h2 className="text-2xl font-serif italic text-white tracking-tight leading-normal">
+                      {activeEntry.content.translation}
+                    </h2>
+                    <p className="text-xs text-white/50 italic leading-relaxed px-2">{clozeExample}</p>
+                    <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">
+                      ¿Cómo se dice en inglés? Piénsalo antes de voltear.
+                    </p>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -220,8 +250,9 @@ export default function VocabularyFlashcards({ onAddXp, onIncrementVocab, onChec
                     e.stopPropagation();
                     playWordAudio(activeEntry.content.word);
                   }}
-                  disabled={ttsLoading === activeEntry.content.word}
-                  className="p-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition shrink-0 cursor-pointer"
+                  disabled={ttsLoading === activeEntry.content.word || isProduction}
+                  className="p-4 rounded-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white shadow-lg shadow-indigo-600/25 transition shrink-0 cursor-pointer"
+                  title={isProduction ? "Intenta recordarla primero" : undefined}
                 >
                   {playingWord === activeEntry.content.word ? (
                     <Volume2 className="w-5 h-5 animate-bounce" />
@@ -242,11 +273,18 @@ export default function VocabularyFlashcards({ onAddXp, onIncrementVocab, onChec
                   <span className="text-xs font-bold text-white/40">Cómo suena: <span className="text-yellow-400 font-mono font-medium">/{activeEntry.content.phonetic}/</span></span>
                 </div>
 
-                <div className="space-y-4 text-left my-auto w-full">
+                <div className="space-y-3 text-left my-auto w-full overflow-y-auto max-h-full">
                   <div>
                     <span className="text-xs text-indigo-300 block font-semibold">Significado:</span>
                     <h3 className="text-xl font-serif italic text-white mt-0.5">{activeEntry.content.translation}</h3>
                   </div>
+
+                  {activeEntry.content.mnemonic && (
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
+                      <span className="text-[10px] text-purple-300 block font-semibold flex items-center gap-1">🧠 Gancho para recordarla:</span>
+                      <p className="text-xs text-purple-100/90 mt-1 leading-relaxed">{activeEntry.content.mnemonic}</p>
+                    </div>
+                  )}
 
                   <div className="bg-white/5 p-3 rounded-xl border border-white/5">
                     <span className="text-[10px] text-indigo-300 block font-semibold">Frase de Ejemplo:</span>

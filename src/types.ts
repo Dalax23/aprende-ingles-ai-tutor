@@ -32,6 +32,10 @@ export interface VocabCardContent {
   translation: string;
   example: string;
   exampleTranslation: string;
+  // Método de Palabra Clave (Atkinson): un gancho mental que asocia el SONIDO de la palabra
+  // en inglés con una palabra parecida en español + una imagen mental vívida y absurda —
+  // mejora la retención a corto y largo plazo más que la memorización simple (meta-análisis).
+  mnemonic: string;
 }
 
 // Entrada persistida en el mazo del usuario: contenido + estado FSRS (ver lib/fsrs.ts).
