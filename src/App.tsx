@@ -5,14 +5,16 @@ import Dashboard from "./components/Dashboard";
 import PronunciationPractice from "./components/PronunciationPractice";
 import ConversationPractice from "./components/ConversationPractice";
 import VocabularyFlashcards from "./components/VocabularyFlashcards";
-import { Flame, Award, BookOpen, Mic, MessageCircle, Sparkles, AlertCircle, ShieldCheck } from "lucide-react";
+import GradedReadings from "./components/GradedReadings";
+import MixedSession from "./components/MixedSession";
+import { Flame, Award, BookOpen, Mic, MessageCircle, Sparkles, AlertCircle, ShieldCheck, BookOpenText, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 const LOCAL_STORAGE_KEY = "apex_english_ai_user_stats";
 const MISSIONS_KEY = "apex_english_ai_claimed_missions";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "speak" | "chat" | "vocab">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "speak" | "chat" | "vocab" | "reading" | "mixed">("dashboard");
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(true);
 
@@ -203,6 +205,10 @@ export default function App() {
     setStats(prev => ({ ...prev, masteredWordsCount: prev.masteredWordsCount + 1 }));
   };
 
+  const incrementReadings = () => {
+    setStats(prev => ({ ...prev, completedReadings: (prev.completedReadings ?? 0) + 1 }));
+  };
+
   // Badge validation logic
   const checkAndUnlockBadges = () => {
     setStats((prev) => {
@@ -332,7 +338,8 @@ export default function App() {
             { id: "dashboard", label: "Mi Progreso", icon: <Award className="w-4 h-4" /> },
             { id: "speak", label: "Pronunciación", icon: <Mic className="w-4 h-4" /> },
             { id: "chat", label: "Tutor Emily", icon: <MessageCircle className="w-4 h-4" /> },
-            { id: "vocab", label: "Vocabulario", icon: <BookOpen className="w-4 h-4" /> }
+            { id: "vocab", label: "Vocabulario", icon: <BookOpen className="w-4 h-4" /> },
+            { id: "reading", label: "Lecturas", icon: <BookOpenText className="w-4 h-4" /> }
           ].map((tab) => {
             const isSelected = activeTab === tab.id;
             return (
@@ -392,6 +399,19 @@ export default function App() {
                   onAddXp={addXp}
                   onIncrementVocab={incrementVocab}
                   onCheckBadges={checkAndUnlockBadges}
+                />
+              )}
+              {activeTab === "reading" && (
+                <GradedReadings onAddXp={addXp} onIncrementReadings={incrementReadings} />
+              )}
+              {activeTab === "mixed" && (
+                <MixedSession
+                  onAddXp={addXp}
+                  onIncrementVocab={incrementVocab}
+                  onIncrementPronunciations={incrementPronunciations}
+                  onPhonemeResult={recordPhonemeResult}
+                  onCheckBadges={checkAndUnlockBadges}
+                  onFinish={() => setActiveTab("dashboard")}
                 />
               )}
             </motion.div>

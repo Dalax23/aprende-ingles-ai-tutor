@@ -9,6 +9,7 @@ export interface UserStats {
   completedPronunciations: number;
   completedConversations: number;
   masteredWordsCount: number;
+  completedReadings?: number;
   // Modelo de dominio (mastery) por sonido fonético y por escenario de conversación,
   // usado para calcular el nivel CEFR estimado (ver lib/mastery.ts). Opcionales para
   // mantener compatibilidad con datos guardados antes de esta función.
@@ -102,4 +103,21 @@ export interface PracticePhrase {
   translation: string;
   topic: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
+}
+
+// Lectura graduada: la longitud/complejidad crece con el nivel (CEFR aproximado).
+// Combina "input comprensible" (Krashen i+1) con lectura + audio simultáneos —
+// la técnica de "reading while listening" mejora tanto fluidez lectora como
+// reconocimiento auditivo al conectar la forma escrita con el sonido real.
+export interface ReadingSentence {
+  text: string; // frase en inglés
+  phonetic: string; // pronunciación figurada completa de la frase, para hispanohablantes
+  translation: string; // traducción al español
+}
+
+export interface ReadingPassage {
+  title: string;
+  level: "Beginner" | "Intermediate" | "Advanced";
+  topic: string;
+  sentences: ReadingSentence[];
 }

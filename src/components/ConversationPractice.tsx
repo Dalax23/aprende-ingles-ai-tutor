@@ -11,11 +11,21 @@ interface ConversationPracticeProps {
   onScenarioResult: (scenarioId: string, hadGrammarError: boolean) => void;
 }
 
+const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
+
 export default function ConversationPractice({ onAddXp, onIncrementConversations, onCheckBadges, onScenarioResult }: ConversationPracticeProps) {
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [level, setLevel] = useState<"Beginner" | "Intermediate" | "Advanced">("Intermediate");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
+
+  // Dificultad adaptativa (input comprensible, i+1 de Krashen): en vez de un nivel fijo
+  // elegido una vez, seguimos la tasa de error gramatical de los últimos intercambios y
+  // subimos/bajamos el nivel de Emily automáticamente para mantenerte en la "zona 80-90%
+  // comprensible" — ni tan fácil que aburra, ni tan difícil que frustre.
+  const [autoLevel, setAutoLevel] = useState(true);
+  const [errorHistory, setErrorHistory] = useState<boolean[]>([]);
+  const [levelChangeNotice, setLevelChangeNotice] = useState<string | null>(null);
 
   // Audio state
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -73,6 +83,13 @@ export default function ConversationPractice({ onAddXp, onIncrementConversations
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, chatLoading]);
+
+  // Auto-descarta el aviso de cambio de nivel después de unos segundos
+  useEffect(() => {
+    if (!levelChangeNotice) return;
+    const timer = setTimeout(() => setLevelChangeNotice(null), 6000);
+    return () => clearTimeout(timer);
+  }, [levelChangeNotice]);
 
   // Start Scenario and boot Emily's first message
   const startScenario = async (scenario: Scenario) => {
@@ -224,6 +241,32 @@ export default function ConversationPractice({ onAddXp, onIncrementConversations
       if (selectedScenario) {
         onScenarioResult(selectedScenario.id, !!data.grammarFeedback);
       }
+
+      // Dificultad adaptativa: evalúa los últimos 5 intercambios. Pocos errores → sube el
+      // nivel (más reto); muchos errores → baja el nivel (más comprensible). Ventana corta
+      // a propósito para reaccionar rápido dentro de una misma conversación.
+      if (autoLevel) {
+        const updatedHistory = [...errorHistory, !!data.grammarFeedback].slice(-5);
+        setErrorHistory(updatedHistory);
+
+        if (updatedHistory.length >= 3) {
+          const errorRate = updatedHistory.filter(Boolean).length / updatedHistory.length;
+          const currentIdx = LEVELS.indexOf(level);
+
+          if (errorRate <= 0.2 && currentIdx < LEVELS.length - 1) {
+            const nextLevel = LEVELS[currentIdx + 1];
+            setLevel(nextLevel);
+            setErrorHistory([]);
+            setLevelChangeNotice(`⬆️ Nivel subido a ${nextLevel === "Intermediate" ? "Medio" : "Avanzado"} — vas muy bien.`);
+          } else if (errorRate >= 0.6 && currentIdx > 0) {
+            const nextLevel = LEVELS[currentIdx - 1];
+            setLevel(nextLevel);
+            setErrorHistory([]);
+            setLevelChangeNotice(`⬇️ Nivel bajado a ${nextLevel === "Beginner" ? "Básico" : "Medio"} — para que sigas entendiendo sin frustrarte.`);
+          }
+        }
+      }
+
       onAddXp(20); // Reward active dialogue practice!
       onIncrementConversations();
       onCheckBadges();
@@ -260,25 +303,46 @@ export default function ConversationPractice({ onAddXp, onIncrementConversations
           </div>
 
           {/* Level settings */}
-          <div className="bg-[#0E0E11] border border-white/10 rounded-3xl p-5 max-w-lg mx-auto flex items-center justify-between gap-4">
-            <span className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-              <BookOpen className="w-4.5 h-4.5 text-indigo-400" /> Nivel de inglés de Emily:
-            </span>
-            <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1 w-full max-w-xs">
-              {(["Beginner", "Intermediate", "Advanced"] as const).map((lvl) => (
-                <button
-                  key={lvl}
-                  onClick={() => setLevel(lvl)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    level === lvl
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {lvl === "Beginner" ? "Básico" : lvl === "Intermediate" ? "Medio" : "Avanzado"}
-                </button>
-              ))}
+          <div className="bg-[#0E0E11] border border-white/10 rounded-3xl p-5 max-w-lg mx-auto space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                <BookOpen className="w-4.5 h-4.5 text-indigo-400" /> Nivel de inglés de Emily:
+              </span>
+              <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1 w-full max-w-xs">
+                {(["Beginner", "Intermediate", "Advanced"] as const).map((lvl) => (
+                  <button
+                    key={lvl}
+                    onClick={() => {
+                      setLevel(lvl);
+                      setAutoLevel(false);
+                    }}
+                    disabled={autoLevel}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+                      level === lvl
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
+                        : "text-white/60 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    {lvl === "Beginner" ? "Básico" : lvl === "Intermediate" ? "Medio" : "Avanzado"}
+                  </button>
+                ))}
+              </div>
             </div>
+            <button
+              onClick={() => setAutoLevel(!autoLevel)}
+              className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                autoLevel
+                  ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                  : "bg-white/5 border border-white/10 text-white/40 hover:text-white/70"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Dificultad Adaptativa {autoLevel ? "ACTIVADA (recomendado)" : "desactivada"}
+            </button>
+            {autoLevel && (
+              <p className="text-[10px] text-white/30 text-center leading-relaxed">
+                Emily ajustará su nivel sola según qué tan bien te va, para mantenerte siempre en el punto justo de reto.
+              </p>
+            )}
           </div>
 
           {/* Scenarios List */}
@@ -368,8 +432,22 @@ export default function ConversationPractice({ onAddXp, onIncrementConversations
                 <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
                 <span className="text-xs font-bold text-white/60 uppercase tracking-wider">Sesión de Conversación Real</span>
               </div>
-              <span className="text-xs font-bold text-white/40">Nivel Emily: {level}</span>
+              <span className="text-xs font-bold text-white/40 flex items-center gap-1.5">
+                Nivel Emily: {level === "Beginner" ? "Básico" : level === "Intermediate" ? "Medio" : "Avanzado"}
+                {autoLevel && <Sparkles className="w-3.5 h-3.5 text-emerald-400" />}
+              </span>
             </div>
+
+            {/* Notificación de ajuste automático de nivel */}
+            {levelChangeNotice && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="bg-emerald-500/10 border-b border-emerald-500/20 text-emerald-200 text-xs px-6 py-2.5 font-semibold shrink-0"
+              >
+                {levelChangeNotice}
+              </motion.div>
+            )}
 
             {/* Error Message */}
             {errorMsg && (

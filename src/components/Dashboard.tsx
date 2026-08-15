@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from "react";
 import { UserStats, Badge } from "../types";
 import { DEFAULT_BADGES } from "../data";
-import { Award, Flame, TrendingUp, CheckCircle, ArrowRight, Sparkles, BookOpen, Mic, MessageSquare, GraduationCap, Settings2 } from "lucide-react";
+import { Award, Flame, TrendingUp, CheckCircle, ArrowRight, Sparkles, BookOpen, Mic, MessageSquare, GraduationCap, Settings2, BookOpenText, Layers } from "lucide-react";
 import { motion } from "motion/react";
 import { loadDeck, deckMasteryValues } from "../lib/vocabDeck";
 import { computeOverallMastery, cefrLabel, recordDailySnapshot } from "../lib/mastery";
 
+type AppView = "dashboard" | "speak" | "chat" | "vocab" | "reading" | "mixed";
+
 interface DashboardProps {
   stats: UserStats;
-  onNavigate: (view: "dashboard" | "speak" | "chat" | "vocab") => void;
+  onNavigate: (view: AppView) => void;
   onClaimDailyXp: (xp: number, missionId: string) => void;
   claimedMissions: string[];
   onSetDailyGoal: (xp: number) => void;
@@ -69,6 +71,16 @@ export default function Dashboard({ stats, onNavigate, onClaimDailyXp, claimedMi
       action: () => onNavigate("vocab"),
       btnText: "Estudiar Tarjetas",
       completed: stats.masteredWordsCount > 0
+    },
+    {
+      id: "reading_mission",
+      title: "Lectura Graduada",
+      description: "Lee una lectura completa mientras escuchas su pronunciación.",
+      xp: 20,
+      icon: <BookOpenText className="w-5 h-5 text-purple-400" />,
+      action: () => onNavigate("reading"),
+      btnText: "Leer Ahora",
+      completed: (stats.completedReadings ?? 0) > 0
     }
   ];
 
@@ -123,6 +135,28 @@ export default function Dashboard({ stats, onNavigate, onClaimDailyXp, claimedMi
           </div>
         </div>
       </div>
+
+      {/* Mixed Session CTA — interleaving: alternar tipos de práctica en una sola sesión
+          sube ~30% el rendimiento vs. practicar un solo tipo en bloque (retrieval practice
+          + interleaving research). */}
+      <button
+        onClick={() => onNavigate("mixed")}
+        className="w-full text-left bg-gradient-to-r from-indigo-600/20 via-purple-600/10 to-indigo-600/20 border border-indigo-500/30 rounded-3xl p-6 flex items-center justify-between gap-4 hover:border-indigo-500/50 transition group cursor-pointer"
+      >
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 bg-indigo-500/20 border border-indigo-500/30 rounded-2xl text-indigo-300 group-hover:scale-105 transition">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-white text-sm md:text-base flex items-center gap-2">
+              Sesión Mixta de Hoy
+              <span className="text-[9px] font-bold bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Recomendado</span>
+            </h3>
+            <p className="text-xs text-white/50 mt-0.5">Vocabulario + Pronunciación + Pares Mínimos en una sola ronda — mezclar tipos de práctica mejora la retención real.</p>
+          </div>
+        </div>
+        <ArrowRight className="w-5 h-5 text-indigo-300 shrink-0" />
+      </button>
 
       {/* Bento Grid Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6" id="stats-grid">
